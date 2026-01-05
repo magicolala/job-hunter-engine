@@ -1,0 +1,225 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Command;
+
+use App\Entity\Job;
+use App\Repository\JobRepository;
+use App\Service\CsvExporter;
+use App\Service\JobScraper;
+use App\Service\LeadFinder;
+use Doctrine\ORM\EntityManagerInterface;
+use Symfony\Component\Console\Attribute\AsCommand;
+use Symfony\Component\Console\Command\Command;
+use Symfony\Component\Console\Input\InputInterface;
+use Symfony\Component\Console\Input\InputOption;
+use Symfony\Component\Console\Output\OutputInterface;
+use Symfony\Component\Console\Style\SymfonyStyle;
+use Symfony\Component\Console\Helper\ProgressBar;
+use Symfony\Component\Process\ExecutableFinder;
+
+#[AsCommand(name: 'app:hunt', description: 'Scrape jobs, enrich leads and export a LinkedIn CSV.')]
+class JobHuntCommand extends Command
+{
+    private const DEFAULT_URL = 'https://www.welcometothejungle.com/fr/jobs?query=symfony';
+    private const DEFAULT_QUERY = 'symfony';
+    private const DEFAULT_OUTPUT = 'var/export_linkedin.csv';
+
+    public function __construct(
+        private JobScraper $scraper,
+        private LeadFinder $leadFinder,
+        private JobRepository $jobRepository,
+        private EntityManagerInterface $entityManager,
+        private CsvExporter $csvExporter
+    ) {
+        parent::__construct();
+    }
+
+    protected function configure(): void
+    {
+        $this
+            ->addOption('url', null, InputOption::VALUE_REQUIRED, 'Search URL to scrape.', self::DEFAULT_URL)
+            ->addOption('source', null, InputOption::VALUE_REQUIRED, 'Source to use: wttj, wttj-api, or remotive.', 'wttj')
+            ->addOption('query', null, InputOption::VALUE_REQUIRED, 'Search query for API sources.', self::DEFAULT_QUERY)
+            ->addOption('limit', null, InputOption::VALUE_OPTIONAL, 'Max number of listings to process.')
+            ->addOption('output', null, InputOption::VALUE_REQUIRED, 'CSV output path.', self::DEFAULT_OUTPUT)
+            ->addOption('no-enrich', null, InputOption::VALUE_NONE, 'Skip Apollo enrichment.')
+            ->addOption('throttle-ms', null, InputOption::VALUE_OPTIONAL, 'Delay between enrich calls in ms.', 0)
+            ->addOption('debug-scrape', null, InputOption::VALUE_NONE, 'Save scrape debug artifacts.');
+    }
+
+    protected function execute(InputInterface $input, OutputInterface $output): int
+    {
+        $io = new SymfonyStyle($input, $output);
+        $io->title('Job Hunter Engine');
+
+        $url = (string) $input->getOption('url');
+        $source = strtolower((string) $input->getOption('source'));
+        $query = (string) $input->getOption('query');
+        $limitOption = $input->getOption('limit');
+        $limit = $limitOption !== null ? max(0, (int) $limitOption) : null;
+        if ($limit === 0) {
+            $limit = null;
+        }
+
+        $outputPath = (string) $input->getOption('output');
+        if ($outputPath === '') {
+            $outputPath = self::DEFAULT_OUTPUT;
+        }
+
+        $skipEnrich = (bool) $input->getOption('no-enrich');
+        $throttleMs = max(0, (int) $input->getOption('throttle-ms'));
+        $debugScrape = (bool) $input->getOption('debug-scrape');
+
+        if ($skipEnrich) {
+            $io->note('Lead enrichment disabled (--no-enrich).');
+        } elseif (!$this->leadFinder->isEnabled()) {
+            $io->warning('APOLLO_API_KEY is empty; lead enrichment will be skipped.');
+            $skipEnrich = true;
+        }
+
+        if ($io->isVerbose()) {
+            $this->writeDebugInfo($io, $url, $source, $query, $limit, $outputPath, $skipEnrich, $throttleMs, $debugScrape);
+        }
+
+        if ($source === 'remotive') {
+            $listings = $this->scraper->scrapeRemotive($query, $limit, $debugScrape);
+        } elseif ($source === 'wttj-api') {
+            $listings = $this->scraper->scrapeWttjApi($query, $limit, $debugScrape);
+        } else {
+            $listings = $this->scraper->scrapeWttjApi($query, $limit, $debugScrape);
+
+            if ($listings === []) {
+                $listings = $this->scraper->scrapeWttj($url, $limit, $debugScrape);
+            }
+        }
+        $io->text(sprintf('Scraped %d job listings.', count($listings)));
+
+        if ($debugScrape) {
+            $io->note('Debug artifacts written to var/debug.');
+        }
+
+        $exportRows = [];
+        $created = 0;
+        $skipped = 0;
+        $total = count($listings);
+        $progress = null;
+
+        if ($total > 0) {
+            $progress = new ProgressBar($output, $total);
+            $progress->start();
+        }
+
+        foreach ($listings as $listing) {
+            if ($this->jobRepository->findOneBy(['externalId' => $listing['externalId']])) {
+                $skipped++;
+                if ($progress) {
+                    $progress->advance();
+                }
+                continue;
+            }
+
+            $job = (new Job())
+                ->setExternalId($listing['externalId'])
+                ->setCompany($listing['company'])
+                ->setTitle($listing['title'])
+                ->setJobUrl($listing['jobUrl'] !== '' ? $listing['jobUrl'] : null);
+
+            $contact = [];
+            if (!$skipEnrich) {
+                $domain = $this->guessCompanyDomain($listing['company']);
+                $contact = $domain !== '' ? $this->leadFinder->findCTO($domain) : [];
+            }
+
+            if ($contact !== []) {
+                $contactName = trim(($contact['first_name'] ?? '') . ' ' . ($contact['last_name'] ?? ''));
+                $job->setContactName($contactName !== '' ? $contactName : null);
+                $job->setContactLinkedin($contact['linkedin_url'] ?? null);
+
+                $exportRows[] = [
+                    $contact['linkedin_url'] ?? '',
+                    $contact['first_name'] ?? 'Team',
+                    $contact['last_name'] ?? 'Tech',
+                    $listing['company'],
+                    $contact['title'] ?? 'Lead Dev',
+                ];
+            }
+
+            if (!$skipEnrich && $throttleMs > 0) {
+                usleep($throttleMs * 1000);
+            }
+
+            $this->entityManager->persist($job);
+            $created++;
+
+            if ($progress) {
+                $progress->advance();
+            }
+        }
+
+        if ($progress) {
+            $progress->finish();
+            $io->newLine(2);
+        }
+
+        $this->entityManager->flush();
+        $csvPath = $this->csvExporter->export($exportRows, $outputPath);
+
+        $io->success(sprintf('Created %d new jobs, skipped %d duplicates.', $created, $skipped));
+        $io->text(sprintf('CSV export ready: %s', $csvPath));
+
+        return Command::SUCCESS;
+    }
+
+    /**
+     * @param array<int, array<int, string>> $rows
+     */
+    private function guessCompanyDomain(string $company): string
+    {
+        $slug = strtolower(trim($company));
+        $slug = preg_replace('/[^a-z0-9]+/i', '', $slug) ?? '';
+
+        if ($slug === '') {
+            return '';
+        }
+
+        return $slug . '.com';
+    }
+
+    private function writeDebugInfo(
+        SymfonyStyle $io,
+        string $url,
+        string $source,
+        string $query,
+        ?int $limit,
+        string $outputPath,
+        bool $skipEnrich,
+        int $throttleMs,
+        bool $debugScrape
+    ): void {
+        $finder = new ExecutableFinder();
+        $chromedriver = $finder->find('chromedriver', null, ['./drivers', './vendor/bin']);
+
+        $io->section('Debug info');
+        $io->listing([
+            sprintf('URL: %s', $url),
+            sprintf('Source: %s', $source),
+            sprintf('Query: %s', $query),
+            sprintf('Limit: %s', $limit === null ? 'none' : (string) $limit),
+            sprintf('Output: %s', $outputPath),
+            sprintf('Enrichment: %s', $skipEnrich ? 'disabled' : 'enabled'),
+            sprintf('Throttle: %d ms', $throttleMs),
+            sprintf('Debug scrape: %s', $debugScrape ? 'enabled' : 'disabled'),
+            sprintf('APOLLO_API_KEY: %s', $this->leadFinder->isEnabled() ? 'set' : 'empty'),
+            sprintf('WTTJ_ALGOLIA_APP_ID: %s', $_SERVER['WTTJ_ALGOLIA_APP_ID'] ?? 'not set'),
+            sprintf('WTTJ_ALGOLIA_API_KEY: %s', isset($_SERVER['WTTJ_ALGOLIA_API_KEY']) && $_SERVER['WTTJ_ALGOLIA_API_KEY'] !== '' ? 'set' : 'empty'),
+            sprintf('WTTJ_ALGOLIA_INDEX: %s', $_SERVER['WTTJ_ALGOLIA_INDEX'] ?? 'wttj_jobs_production_fr'),
+            sprintf('PANTHER_CHROME_BINARY: %s', $_SERVER['PANTHER_CHROME_BINARY'] ?? 'not set'),
+            sprintf('PANTHER_CHROME_DRIVER_BINARY: %s', $_SERVER['PANTHER_CHROME_DRIVER_BINARY'] ?? 'not set'),
+            sprintf('chromedriver (found): %s', $chromedriver ?? 'not found'),
+            sprintf('drivers/chromedriver: %s', file_exists('drivers/chromedriver') ? 'present' : 'missing'),
+            sprintf('chromedriver log: %s', (getcwd() ?: '.') . '/var/chromedriver.log'),
+        ]);
+    }
+}
