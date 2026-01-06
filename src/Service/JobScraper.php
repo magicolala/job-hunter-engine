@@ -15,7 +15,11 @@ class JobScraper
     private const REMOTIVE_URL = 'https://remotive.com/api/remote-jobs';
     private const WTTJ_API_REFERER = 'https://www.welcometothejungle.com/';
 
-    public function __construct(private HttpClientInterface $httpClient)
+    public function __construct(
+        private HttpClientInterface $httpClient,
+        private PaginationPolicy $paginationPolicy,
+        private RateLimiter $rateLimiter
+    )
     {
     }
 
@@ -65,6 +69,11 @@ class JobScraper
             $jobs = $this->parseJsonLd($crawler, $limit, $count);
         }
 
+        foreach ($jobs as &$job) {
+            $job['source'] = 'wttj';
+        }
+        unset($job);
+
         $client->quit();
 
         return $jobs;
@@ -89,20 +98,31 @@ class JobScraper
         $count = 0;
 
         do {
-            $response = $this->httpClient->request('POST', sprintf('https://%s-dsn.algolia.net/1/indexes/%s/query', $appId, $index), [
-                'headers' => [
-                    'X-Algolia-Application-Id' => $appId,
-                    'X-Algolia-API-Key' => $apiKey,
-                    'Referer' => self::WTTJ_API_REFERER,
-                ],
-                'json' => [
-                    'query' => $query,
-                    'hitsPerPage' => $hitsPerPage,
-                    'page' => $page,
-                ],
-            ]);
+            $payload = [];
+            $attempt = 0;
 
-            $payload = $response->toArray(false);
+            while ($attempt < 3) {
+                try {
+                    $response = $this->httpClient->request('POST', sprintf('https://%s-dsn.algolia.net/1/indexes/%s/query', $appId, $index), [
+                        'headers' => [
+                            'X-Algolia-Application-Id' => $appId,
+                            'X-Algolia-API-Key' => $apiKey,
+                            'Referer' => self::WTTJ_API_REFERER,
+                        ],
+                        'json' => [
+                            'query' => $query,
+                            'hitsPerPage' => $hitsPerPage,
+                            'page' => $page,
+                        ],
+                    ]);
+
+                    $payload = $response->toArray(false);
+                    break;
+                } catch (\Throwable) {
+                    $attempt++;
+                    usleep($this->rateLimiter->getBackoffDelayMs($attempt) * 1000);
+                }
+            }
 
             if ($debug && $page === 0) {
                 $projectRoot = getcwd() ?: '.';
@@ -143,13 +163,14 @@ class JobScraper
                     'title' => $title,
                     'href' => $jobUrl,
                     'jobUrl' => $jobUrl,
+                    'source' => 'wttj-api',
                 ];
 
                 $count++;
             }
 
             $page++;
-        } while (!empty($hits));
+        } while ($this->paginationPolicy->shouldContinue(count($hits), $hitsPerPage, null, $page));
 
         return $jobs;
     }
@@ -159,49 +180,121 @@ class JobScraper
      */
     public function scrapeRemotive(string $query, ?int $limit = null, bool $debug = false): array
     {
-        $url = self::REMOTIVE_URL . '?search=' . urlencode($query);
-        $response = $this->httpClient->request('GET', $url);
-        $data = $response->toArray(false);
-
-        if ($debug) {
-            $projectRoot = getcwd() ?: '.';
-            $filesystem = new Filesystem();
-            $debugDir = $projectRoot . '/var/debug';
-            $filesystem->mkdir($debugDir);
-            file_put_contents($debugDir . '/remotive.json', json_encode($data, JSON_PRETTY_PRINT));
-        }
-
+        $pageSize = 50;
+        $page = 0;
         $jobs = [];
         $count = 0;
+        $seenExternalIds = [];
 
-        foreach (($data['jobs'] ?? []) as $job) {
-            if ($limit !== null && $count >= $limit) {
-                break;
+        do {
+            $url = self::REMOTIVE_URL . '?search=' . urlencode($query) . '&limit=' . $pageSize . '&page=' . $page;
+            $response = $this->httpClient->request('GET', $url);
+            $data = $response->toArray(false);
+
+            if ($debug && $page === 0) {
+                $projectRoot = getcwd() ?: '.';
+                $filesystem = new Filesystem();
+                $debugDir = $projectRoot . '/var/debug';
+                $filesystem->mkdir($debugDir);
+                file_put_contents($debugDir . '/remotive.json', json_encode($data, JSON_PRETTY_PRINT));
             }
 
-            $company = trim((string) ($job['company_name'] ?? ''));
-            $title = trim((string) ($job['title'] ?? ''));
-            $jobUrl = trim((string) ($job['url'] ?? ''));
-            $externalId = (string) ($job['id'] ?? '');
+            $pageJobs = $data['jobs'] ?? [];
+            $pageCount = 0;
 
-            if ($company === '' || $title === '') {
-                continue;
+            foreach ($pageJobs as $job) {
+                if ($limit !== null && $count >= $limit) {
+                    break 2;
+                }
+
+                $company = trim((string) ($job['company_name'] ?? ''));
+                $title = trim((string) ($job['title'] ?? ''));
+                $jobUrl = trim((string) ($job['url'] ?? ''));
+                $externalId = (string) ($job['id'] ?? '');
+
+                if ($company === '' || $title === '') {
+                    continue;
+                }
+
+                $externalId = $externalId !== '' ? $externalId : $this->buildExternalId($company, $title, $jobUrl);
+
+                if (isset($seenExternalIds[$externalId])) {
+                    continue;
+                }
+
+                $seenExternalIds[$externalId] = true;
+                $pageCount++;
+
+                $jobs[] = [
+                    'externalId' => $externalId,
+                    'company' => $company,
+                    'title' => $title,
+                    'href' => $jobUrl,
+                    'jobUrl' => $jobUrl,
+                    'source' => 'remotive',
+                ];
+
+                $count++;
             }
 
-            $externalId = $externalId !== '' ? $externalId : $this->buildExternalId($company, $title, $jobUrl);
-
-            $jobs[] = [
-                'externalId' => $externalId,
-                'company' => $company,
-                'title' => $title,
-                'href' => $jobUrl,
-                'jobUrl' => $jobUrl,
-            ];
-
-            $count++;
-        }
+            $page++;
+        } while ($this->paginationPolicy->shouldContinue($pageCount, $pageSize, null, $page));
 
         return $jobs;
+    }
+
+    /**
+     * @param string[] $sources
+     * @param string[] $queries
+     * @return array<int, array<string, string>>
+     */
+    public function scrapeSources(
+        array $sources,
+        array $queries,
+        ?int $limit = null,
+        bool $debug = false,
+        ?string $fallbackUrl = null
+    ): array {
+        $sources = array_values(array_filter(array_map('strtolower', $sources)));
+        $queries = array_values(array_filter($queries, static fn (string $query): bool => trim($query) !== ''));
+
+        if ($sources === []) {
+            $sources = ['wttj'];
+        }
+
+        if ($queries === []) {
+            $queries = [''];
+        }
+
+        $results = [];
+
+        foreach ($sources as $source) {
+            foreach ($queries as $query) {
+                if ($source === 'remotive') {
+                    $results = array_merge($results, $this->scrapeRemotive($query, $limit, $debug));
+                    continue;
+                }
+
+                if ($source === 'wttj-api') {
+                    $results = array_merge($results, $this->scrapeWttjApi($query, $limit, $debug));
+                    continue;
+                }
+
+                if ($source === 'wttj') {
+                    $apiResults = $query !== '' ? $this->scrapeWttjApi($query, $limit, $debug) : [];
+                    if ($apiResults !== []) {
+                        $results = array_merge($results, $apiResults);
+                        continue;
+                    }
+
+                    if ($fallbackUrl !== null && $fallbackUrl !== '') {
+                        $results = array_merge($results, $this->scrapeWttj($fallbackUrl, $limit, $debug));
+                    }
+                }
+            }
+        }
+
+        return $results;
     }
 
     /**

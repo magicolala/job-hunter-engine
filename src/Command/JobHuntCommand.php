@@ -7,8 +7,13 @@ namespace App\Command;
 use App\Entity\Job;
 use App\Repository\JobRepository;
 use App\Service\CsvExporter;
+use App\Service\JobDeduplicator;
+use App\Service\JobIngestionService;
 use App\Service\JobScraper;
 use App\Service\LeadFinder;
+use App\Service\ProfileCriteriaService;
+use App\Service\ScrapingRunRecorder;
+use App\Service\SourceRegistry;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
@@ -31,7 +36,12 @@ class JobHuntCommand extends Command
         private LeadFinder $leadFinder,
         private JobRepository $jobRepository,
         private EntityManagerInterface $entityManager,
-        private CsvExporter $csvExporter
+        private CsvExporter $csvExporter,
+        private SourceRegistry $sourceRegistry,
+        private JobDeduplicator $deduplicator,
+        private ScrapingRunRecorder $scrapingRunRecorder,
+        private ProfileCriteriaService $profileCriteriaService,
+        private JobIngestionService $jobIngestionService
     ) {
         parent::__construct();
     }
@@ -39,6 +49,8 @@ class JobHuntCommand extends Command
     protected function configure(): void
     {
         $this
+            ->addOption('sources', null, InputOption::VALUE_OPTIONAL, 'Comma-separated sources to use.', 'wttj')
+            ->addOption('queries', null, InputOption::VALUE_OPTIONAL, 'Comma-separated search queries.', self::DEFAULT_QUERY)
             ->addOption('url', null, InputOption::VALUE_REQUIRED, 'Search URL to scrape.', self::DEFAULT_URL)
             ->addOption('source', null, InputOption::VALUE_REQUIRED, 'Source to use: wttj, wttj-api, or remotive.', 'wttj')
             ->addOption('query', null, InputOption::VALUE_REQUIRED, 'Search query for API sources.', self::DEFAULT_QUERY)
@@ -55,8 +67,14 @@ class JobHuntCommand extends Command
         $io->title('Job Hunter Engine');
 
         $url = (string) $input->getOption('url');
-        $source = strtolower((string) $input->getOption('source'));
-        $query = (string) $input->getOption('query');
+        $legacySource = strtolower((string) $input->getOption('source'));
+        $legacyQuery = (string) $input->getOption('query');
+        $sourcesOption = (string) $input->getOption('sources');
+        $queriesOption = (string) $input->getOption('queries');
+        $sources = $this->sourceRegistry->normalizeSources(
+            $sourcesOption !== '' ? $this->parseCsvList($sourcesOption) : [$legacySource]
+        );
+        $queries = $queriesOption !== '' ? $this->parseCsvList($queriesOption) : [$legacyQuery];
         $limitOption = $input->getOption('limit');
         $limit = $limitOption !== null ? max(0, (int) $limitOption) : null;
         if ($limit === 0) {
@@ -80,21 +98,22 @@ class JobHuntCommand extends Command
         }
 
         if ($io->isVerbose()) {
-            $this->writeDebugInfo($io, $url, $source, $query, $limit, $outputPath, $skipEnrich, $throttleMs, $debugScrape);
+            $this->writeDebugInfo($io, $url, implode(',', $sources), implode(',', $queries), $limit, $outputPath, $skipEnrich, $throttleMs, $debugScrape);
         }
 
-        if ($source === 'remotive') {
-            $listings = $this->scraper->scrapeRemotive($query, $limit, $debugScrape);
-        } elseif ($source === 'wttj-api') {
-            $listings = $this->scraper->scrapeWttjApi($query, $limit, $debugScrape);
-        } else {
-            $listings = $this->scraper->scrapeWttjApi($query, $limit, $debugScrape);
-
-            if ($listings === []) {
-                $listings = $this->scraper->scrapeWttj($url, $limit, $debugScrape);
-            }
-        }
-        $io->text(sprintf('Scraped %d job listings.', count($listings)));
+        $run = $this->scrapingRunRecorder->startRun($sources, $queries);
+        $listings = $this->scraper->scrapeSources($sources, $queries, $limit, $debugScrape, $url);
+        $total = count($listings);
+        $existingExternalIds = $this->jobRepository->findExistingExternalIds(
+            array_values(array_filter(array_map(
+                static fn (array $listing): string => (string) ($listing['externalId'] ?? ''),
+                $listings
+            )))
+        );
+        $deduped = $this->deduplicator->deduplicate($listings, $existingExternalIds);
+        $unique = count($deduped);
+        $duplicates = $total - $unique;
+        $io->text(sprintf('Scraped %d listings (%d unique).', $total, $unique));
 
         if ($debugScrape) {
             $io->note('Debug artifacts written to var/debug.');
@@ -102,29 +121,24 @@ class JobHuntCommand extends Command
 
         $exportRows = [];
         $created = 0;
-        $skipped = 0;
-        $total = count($listings);
+        $total = $unique;
         $progress = null;
+        $criteria = $this->profileCriteriaService->getCurrent();
 
         if ($total > 0) {
             $progress = new ProgressBar($output, $total);
             $progress->start();
         }
 
-        foreach ($listings as $listing) {
-            if ($this->jobRepository->findOneBy(['externalId' => $listing['externalId']])) {
-                $skipped++;
-                if ($progress) {
-                    $progress->advance();
-                }
-                continue;
-            }
-
+        foreach ($deduped as $listing) {
+            $listing = $this->jobIngestionService->enrichListing($listing, $criteria);
             $job = (new Job())
-                ->setExternalId($listing['externalId'])
+                ->setExternalId($listing['externalId'] !== '' ? $listing['externalId'] : null)
+                ->setSource($listing['source'] ?? $legacySource)
                 ->setCompany($listing['company'])
                 ->setTitle($listing['title'])
                 ->setJobUrl($listing['jobUrl'] !== '' ? $listing['jobUrl'] : null);
+            $this->jobIngestionService->applyToJob($job, $listing);
 
             $contact = [];
             if (!$skipEnrich) {
@@ -165,8 +179,9 @@ class JobHuntCommand extends Command
 
         $this->entityManager->flush();
         $csvPath = $this->csvExporter->export($exportRows, $outputPath);
+        $this->scrapingRunRecorder->completeRun($run, $total, $unique, $created, $duplicates);
 
-        $io->success(sprintf('Created %d new jobs, skipped %d duplicates.', $created, $skipped));
+        $io->success(sprintf('Created %d new jobs, skipped %d duplicates.', $created, $duplicates));
         $io->text(sprintf('CSV export ready: %s', $csvPath));
 
         return Command::SUCCESS;
@@ -221,5 +236,15 @@ class JobHuntCommand extends Command
             sprintf('drivers/chromedriver: %s', file_exists('drivers/chromedriver') ? 'present' : 'missing'),
             sprintf('chromedriver log: %s', (getcwd() ?: '.') . '/var/chromedriver.log'),
         ]);
+    }
+
+    /**
+     * @return string[]
+     */
+    private function parseCsvList(string $value): array
+    {
+        $parts = array_map('trim', explode(',', $value));
+
+        return array_values(array_filter($parts, static fn (string $item): bool => $item !== ''));
     }
 }

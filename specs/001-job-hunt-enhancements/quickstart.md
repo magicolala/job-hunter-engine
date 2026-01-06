@@ -24,6 +24,19 @@ Set API keys in `.env.local` as needed for sources and enrichment.
 php bin/console app:hunt --sources=wttj,remotive --queries="symfony,php" --limit=100
 ```
 
+## List Jobs with Filters
+
+```bash
+php bin/console app:jobs --technologies="symfony,docker" --days=30 --min-score=70
+```
+
+## Update Job Status and View Pipeline
+
+```bash
+php bin/console app:job-status --id=123 --status=CONTACTED
+php bin/console app:job-pipeline
+```
+
 ## Verify Results
 
 - Confirm new jobs are persisted.

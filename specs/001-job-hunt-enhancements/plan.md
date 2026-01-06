@@ -111,7 +111,8 @@ inputs, and pipeline status, enabling future UI or API clients.
 ### Quickstart
 
 `quickstart.md` documents local setup, migrations, and how to run the enhanced
-scraper with multi-source and pagination options.
+scraper with multi-source and pagination options, plus the `app:jobs`,
+`app:job-status`, and `app:job-pipeline` commands.
 
 ### Agent Context Update
 

@@ -27,7 +27,7 @@ description: "Task list template for feature implementation"
 
 **Purpose**: Project initialization and basic structure
 
-- [ ] T001 [P] Create test directories in `tests/Service`, `tests/Command`, `tests/Repository`
+- [X] T001 [P] Create test directories in `tests/Service`, `tests/Command`, `tests/Repository`
 
 ---
 
@@ -37,14 +37,14 @@ description: "Task list template for feature implementation"
 
 **⚠️ CRITICAL**: No user story work can begin until this phase is complete
 
-- [ ] T002 Create application status enum in `src/Enum/ApplicationStatus.php`
-- [ ] T003 Update job entity fields in `src/Entity/Job.php`
-- [ ] T004 Create profile criteria entity in `src/Entity/ProfileCriteria.php`
-- [ ] T005 Create scraping run entity in `src/Entity/ScrapingRun.php`
-- [ ] T006 Update job repository filters/dedup/pipeline queries in `src/Repository/JobRepository.php`
-- [ ] T007 Create profile criteria repository in `src/Repository/ProfileCriteriaRepository.php`
-- [ ] T008 Create scraping run repository in `src/Repository/ScrapingRunRepository.php`
-- [ ] T009 Generate Doctrine migration in `migrations/VersionYYYYMMDDHHMMSS.php`
+- [X] T002 Create application status enum in `src/Enum/ApplicationStatus.php`
+- [X] T003 Update job entity fields in `src/Entity/Job.php`
+- [X] T004 Create profile criteria entity in `src/Entity/ProfileCriteria.php`
+- [X] T005 Create scraping run entity in `src/Entity/ScrapingRun.php`
+- [X] T006 Update job repository filters/dedup/pipeline queries in `src/Repository/JobRepository.php`
+- [X] T007 Create profile criteria repository in `src/Repository/ProfileCriteriaRepository.php`
+- [X] T008 Create scraping run repository in `src/Repository/ScrapingRunRepository.php`
+- [X] T009 Generate Doctrine migration in `migrations/VersionYYYYMMDDHHMMSS.php`
 
 **Checkpoint**: Foundation ready - user story implementation can now begin in parallel
 
@@ -60,16 +60,16 @@ description: "Task list template for feature implementation"
 
 > **NOTE: Write these tests FIRST, ensure they FAIL before implementation**
 
-- [ ] T010 [P] [US1] Add deduplication unit tests in `tests/Service/JobDeduplicatorTest.php`
-- [ ] T011 [P] [US1] Add multi-source integration tests in `tests/Command/JobHuntCommandTest.php`
+- [X] T010 [P] [US1] Add deduplication unit tests in `tests/Service/JobDeduplicatorTest.php`
+- [X] T011 [P] [US1] Add multi-source integration tests in `tests/Command/JobHuntCommandTest.php`
 
 ### Implementation for User Story 1
 
-- [ ] T012 [P] [US1] Add source registry mapping in `src/Service/SourceRegistry.php`
-- [ ] T013 [P] [US1] Add deduplication service in `src/Service/JobDeduplicator.php`
-- [ ] T014 [P] [US1] Add scraping run recorder in `src/Service/ScrapingRunRecorder.php`
-- [ ] T015 [US1] Update scraper to accept source/query inputs in `src/Service/JobScraper.php`
-- [ ] T016 [US1] Orchestrate multi-source runs in `src/Command/JobHuntCommand.php`
+- [X] T012 [P] [US1] Add source registry mapping in `src/Service/SourceRegistry.php`
+- [X] T013 [P] [US1] Add deduplication service in `src/Service/JobDeduplicator.php`
+- [X] T014 [P] [US1] Add scraping run recorder in `src/Service/ScrapingRunRecorder.php`
+- [X] T015 [US1] Update scraper to accept source/query inputs in `src/Service/JobScraper.php`
+- [X] T016 [US1] Orchestrate multi-source runs in `src/Command/JobHuntCommand.php`
 
 **Checkpoint**: User Story 1 fully functional and independently testable
 
@@ -83,16 +83,16 @@ description: "Task list template for feature implementation"
 
 ### Tests for User Story 2
 
-- [ ] T017 [P] [US2] Add pagination policy tests in `tests/Service/PaginationPolicyTest.php`
-- [ ] T018 [P] [US2] Add rate limiter/backoff tests in `tests/Service/RateLimiterTest.php`
+- [X] T017 [P] [US2] Add pagination policy tests in `tests/Service/PaginationPolicyTest.php`
+- [X] T018 [P] [US2] Add rate limiter/backoff tests in `tests/Service/RateLimiterTest.php`
 
 ### Implementation for User Story 2
 
-- [ ] T019 [P] [US2] Add pagination policy helper in `src/Service/PaginationPolicy.php`
-- [ ] T020 [P] [US2] Add rate limiter/backoff helper in `src/Service/RateLimiter.php`
-- [ ] T021 [US2] Extend WTTJ API pagination in `src/Service/JobScraper.php`
-- [ ] T022 [US2] Extend Remotive pagination in `src/Service/JobScraper.php`
-- [ ] T023 [US2] Enforce per-combination limit handling in `src/Service/JobScraper.php`
+- [X] T019 [P] [US2] Add pagination policy helper in `src/Service/PaginationPolicy.php`
+- [X] T020 [P] [US2] Add rate limiter/backoff helper in `src/Service/RateLimiter.php`
+- [X] T021 [US2] Extend WTTJ API pagination in `src/Service/JobScraper.php`
+- [X] T022 [US2] Extend Remotive pagination in `src/Service/JobScraper.php`
+- [X] T023 [US2] Enforce per-combination limit handling in `src/Service/JobScraper.php`
 
 **Checkpoint**: User Stories 1 and 2 both work independently
 
@@ -106,17 +106,17 @@ description: "Task list template for feature implementation"
 
 ### Tests for User Story 3
 
-- [ ] T024 [P] [US3] Add scoring tests in `tests/Service/ScoringServiceTest.php`
-- [ ] T025 [P] [US3] Add technology extraction tests in `tests/Service/TechnologyExtractorTest.php`
+- [X] T024 [P] [US3] Add scoring tests in `tests/Service/ScoringServiceTest.php`
+- [X] T025 [P] [US3] Add technology extraction tests in `tests/Service/TechnologyExtractorTest.php`
 
 ### Implementation for User Story 3
 
-- [ ] T026 [P] [US3] Add technology dictionary in `src/Service/TechnologyDictionary.php`
-- [ ] T027 [P] [US3] Add technology extractor in `src/Service/TechnologyExtractor.php`
-- [ ] T028 [P] [US3] Add scoring service in `src/Service/ScoringService.php`
-- [ ] T029 [P] [US3] Add profile criteria service in `src/Service/ProfileCriteriaService.php`
-- [ ] T030 [US3] Add ingestion pipeline to apply scoring in `src/Service/JobIngestionService.php`
-- [ ] T031 [US3] Wire scoring pipeline into command flow in `src/Command/JobHuntCommand.php`
+- [X] T026 [P] [US3] Add technology dictionary in `src/Service/TechnologyDictionary.php`
+- [X] T027 [P] [US3] Add technology extractor in `src/Service/TechnologyExtractor.php`
+- [X] T028 [P] [US3] Add scoring service in `src/Service/ScoringService.php`
+- [X] T029 [P] [US3] Add profile criteria service in `src/Service/ProfileCriteriaService.php`
+- [X] T030 [US3] Add ingestion pipeline to apply scoring in `src/Service/JobIngestionService.php`
+- [X] T031 [US3] Wire scoring pipeline into command flow in `src/Command/JobHuntCommand.php`
 
 **Checkpoint**: User Stories 1-3 all work independently
 
@@ -130,13 +130,13 @@ description: "Task list template for feature implementation"
 
 ### Tests for User Story 4
 
-- [ ] T032 [P] [US4] Add repository filter tests in `tests/Repository/JobRepositoryTest.php`
+- [X] T032 [P] [US4] Add repository filter tests in `tests/Repository/JobRepositoryTest.php`
 
 ### Implementation for User Story 4
 
-- [ ] T033 [P] [US4] Add filtering methods to repository in `src/Repository/JobRepository.php`
-- [ ] T034 [US4] Add list/filter command in `src/Command/JobListCommand.php`
-- [ ] T035 [US4] Add CLI options for technology and recency filters in `src/Command/JobListCommand.php`
+- [X] T033 [P] [US4] Add filtering methods to repository in `src/Repository/JobRepository.php`
+- [X] T034 [US4] Add list/filter command in `src/Command/JobListCommand.php`
+- [X] T035 [US4] Add CLI options for technology and recency filters in `src/Command/JobListCommand.php`
 
 **Checkpoint**: User Stories 1-4 all work independently
 
@@ -150,13 +150,13 @@ description: "Task list template for feature implementation"
 
 ### Tests for User Story 5
 
-- [ ] T036 [P] [US5] Add status transition tests in `tests/Service/JobStatusServiceTest.php`
+- [X] T036 [P] [US5] Add status transition tests in `tests/Service/JobStatusServiceTest.php`
 
 ### Implementation for User Story 5
 
-- [ ] T037 [P] [US5] Add status service in `src/Service/JobStatusService.php`
-- [ ] T038 [US5] Add status update command in `src/Command/JobStatusCommand.php`
-- [ ] T039 [US5] Add pipeline summary command in `src/Command/JobPipelineCommand.php`
+- [X] T037 [P] [US5] Add status service in `src/Service/JobStatusService.php`
+- [X] T038 [US5] Add status update command in `src/Command/JobStatusCommand.php`
+- [X] T039 [US5] Add pipeline summary command in `src/Command/JobPipelineCommand.php`
 
 **Checkpoint**: All user stories independently functional
 
@@ -166,8 +166,8 @@ description: "Task list template for feature implementation"
 
 **Purpose**: Improvements that affect multiple user stories
 
-- [ ] T040 [P] Update quickstart instructions in `specs/001-job-hunt-enhancements/quickstart.md`
-- [ ] T041 [P] Add command usage notes in `specs/001-job-hunt-enhancements/plan.md`
+- [X] T040 [P] Update quickstart instructions in `specs/001-job-hunt-enhancements/quickstart.md`
+- [X] T041 [P] Add command usage notes in `specs/001-job-hunt-enhancements/plan.md`
 
 ---
 
