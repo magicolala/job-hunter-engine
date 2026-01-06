@@ -141,6 +141,14 @@
             <label>Score min</label>
             <input type="number" name="minScore" value="{{ minScore }}" placeholder="70">
         </div>
+        <div>
+            <label>Tri</label>
+            <input type="text" name="sort" value="{{ sort }}" placeholder="publishedAt">
+        </div>
+        <div>
+            <label>Ordre</label>
+            <input type="text" name="direction" value="{{ direction }}" placeholder="desc">
+        </div>
         <div style="align-self:end;">
             <button type="submit">Filtrer</button>
         </div>
@@ -154,9 +162,11 @@
             <tr>
                 <th>Entreprise</th>
                 <th>Poste</th>
+                <th>Date</th>
                 <th>Score</th>
                 <th>Statut</th>
                 <th>Lien</th>
+                <th>Detail</th>
             </tr>
             </thead>
             <tbody>
@@ -164,6 +174,7 @@
                 <tr>
                     <td>{{ job.company }}</td>
                     <td>{{ job.title }}</td>
+                    <td>{{ job.publishedAt ? job.publishedAt|date('Y-m-d') : job.createdAt|date('Y-m-d') }}</td>
                     <td>{{ job.relevanceScore is not null ? job.relevanceScore : 'n/a' }}</td>
                     <td>{{ job.status.value }}</td>
                     <td>
@@ -173,6 +184,7 @@
                             -
                         {% endif %}
                     </td>
+                    <td><a href="/jobs/{{ job.id }}">Ouvrir</a></td>
                 </tr>
             {% endfor %}
             </tbody>

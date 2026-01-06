@@ -226,9 +226,15 @@
             <span class="badge">Job Hunter Engine</span>
             <h1>Dashboard de scraping et de priorisation</h1>
             <p>Vue instantanee sur le volume, la qualite et le suivi de tes candidatures.</p>
+            <div style="margin-top: 12px;">
+                <a class="pill" href="/jobs">Voir la liste des offres</a>
+            </div>
         </div>
         <div class="hero-panel">
             <div class="pill">Dernier run</div>
+            <form method="post" action="/dashboard/run-scrape">
+                <button type="submit" style="background: var(--accent); color: white; border: none; padding: 8px 12px; border-radius: 10px; font-weight: 600; cursor: pointer;">Lancer un scraping</button>
+            </form>
             {% if latestRun %}
                 <div><strong>Status:</strong> {{ latestRun.status }}</div>
                 <div><strong>Sources:</strong> {{ latestRun.sources|join(', ') }}</div>

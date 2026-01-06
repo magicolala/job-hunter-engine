@@ -64,7 +64,7 @@ class JobRepository extends ServiceEntityRepository
         }
 
         if ($publishedSince !== null) {
-            $qb->andWhere('job.publishedAt >= :publishedSince')
+            $qb->andWhere('(job.publishedAt >= :publishedSince OR (job.publishedAt IS NULL AND job.createdAt >= :publishedSince))')
                 ->setParameter('publishedSince', $publishedSince);
         }
 

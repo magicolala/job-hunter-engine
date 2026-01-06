@@ -7,7 +7,9 @@ namespace App\Controller;
 use App\Repository\JobRepository;
 use App\Repository\ScrapingRunRepository;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
+use Symfony\Component\HttpFoundation\RedirectResponse;
 use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\Process\Process;
 use Symfony\Component\Routing\Attribute\Route;
 
 final class DashboardController extends AbstractController
@@ -55,5 +57,21 @@ final class DashboardController extends AbstractController
             'avgScore' => $avgScore,
             'latestRun' => $latestRun,
         ]);
+    }
+
+    #[Route('/dashboard/run-scrape', name: 'dashboard_run_scrape', methods: ['POST'])]
+    public function runScrape(): RedirectResponse
+    {
+        $process = new Process(['php', 'bin/console', 'app:hunt']);
+        $process->setTimeout(300);
+        $process->run();
+
+        if ($process->isSuccessful()) {
+            $this->addFlash('success', 'Scraping lance avec succes.');
+        } else {
+            $this->addFlash('error', 'Echec du scraping: ' . trim($process->getErrorOutput()));
+        }
+
+        return $this->redirectToRoute('dashboard');
     }
 }
