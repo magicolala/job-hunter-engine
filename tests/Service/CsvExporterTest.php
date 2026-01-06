@@ -28,8 +28,8 @@ class CsvExporterTest extends TestCase
         $contents = file($path, FILE_IGNORE_NEW_LINES);
 
         $this->assertSame('linkedin_url,first_name,last_name,company,job_title', $contents[0]);
-        $this->assertSame('"https://linkedin.com/in/alice",Alice,Doe,Acme,CTO', $contents[1]);
-        $this->assertSame('"https://linkedin.com/in/bob",Bob,Smith,Beta,"Lead Dev"', $contents[2]);
+        $this->assertSame('https://linkedin.com/in/alice,Alice,Doe,Acme,CTO', $contents[1]);
+        $this->assertSame('https://linkedin.com/in/bob,Bob,Smith,Beta,"Lead Dev"', $contents[2]);
 
         unlink($path);
         rmdir($dir);
