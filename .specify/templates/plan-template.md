@@ -31,7 +31,11 @@
 
 *GATE: Must pass before Phase 0 research. Re-check after Phase 1 design.*
 
-[Gates determined based on constitution file]
+- Structure matches `src/`, `config/`, `migrations/`, `public/`, `var/` layout or plan documents deviation.
+- Strict types + PSR-12 enforcement plan documented for new/changed PHP files.
+- Testing expectations recorded; if tests not requested, manual verification noted.
+- UX consistency impacts documented (prior behavior vs. new behavior).
+- Performance targets recorded with mitigation notes for any regression risk.
 
 ## Project Structure
 
