@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Liste des offres</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap');
+
+        :root {
+            --bg: #f6f0e8;
+            --ink: #1d1a16;
+            --muted: #6b635c;
+            --accent: #ff6b4a;
+            --card: #ffffff;
+            --border: #e3d7cb;
+        }
+
+        * { box-sizing: border-box; }
+
+        body {
+            margin: 0;
+            font-family: 'Space Grotesk', sans-serif;
+            color: var(--ink);
+            background: var(--bg);
+        }
+
+        .page {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 32px 24px 80px;
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .header h1 { margin: 0; }
+
+        .filters {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 16px;
+            margin-bottom: 20px;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+            gap: 12px;
+        }
+
+        .filters label {
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--muted);
+            display: block;
+            margin-bottom: 6px;
+        }
+
+        .filters input {
+            width: 100%;
+            padding: 8px 10px;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+            font-family: inherit;
+        }
+
+        .filters button {
+            padding: 10px 12px;
+            border-radius: 10px;
+            border: none;
+            background: var(--accent);
+            color: white;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background: var(--card);
+            border-radius: 16px;
+            overflow: hidden;
+            border: 1px solid var(--border);
+        }
+
+        th, td {
+            text-align: left;
+            padding: 12px 10px;
+            border-bottom: 1px solid #f0e4d6;
+        }
+
+        th {
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            color: var(--muted);
+        }
+
+        a {
+            color: var(--accent);
+            text-decoration: none;
+        }
+
+        .empty {
+            color: var(--muted);
+            font-style: italic;
+            margin-top: 20px;
+        }
+
+        @media (max-width: 720px) {
+            .header { flex-direction: column; gap: 10px; align-items: flex-start; }
+            table { font-size: 13px; }
+        }
+    </style>
+</head>
+<body>
+<div class="page">
+    <div class="header">
+        <h1>Liste des offres</h1>
+        <a href="/dashboard">Retour dashboard</a>
+    </div>
+
+    <form class="filters" method="get" action="">
+        <div>
+            <label>Technologies</label>
+            <input type="text" name="technologies" value="{{ technologies|join(', ') }}" placeholder="symfony, docker">
+        </div>
+        <div>
+            <label>Recence (jours)</label>
+            <input type="number" name="days" value="{{ days }}">
+        </div>
+        <div>
+            <label>Status</label>
+            <input type="text" name="status" value="{{ status }}" placeholder="FOUND">
+        </div>
+        <div>
+            <label>Score min</label>
+            <input type="number" name="minScore" value="{{ minScore }}" placeholder="70">
+        </div>
+        <div style="align-self:end;">
+            <button type="submit">Filtrer</button>
+        </div>
+    </form>
+
+    {% if jobs is empty %}
+        <div class="empty">Aucune offre ne correspond aux filtres.</div>
+    {% else %}
+        <table>
+            <thead>
+            <tr>
+                <th>Entreprise</th>
+                <th>Poste</th>
+                <th>Score</th>
+                <th>Statut</th>
+                <th>Lien</th>
+            </tr>
+            </thead>
+            <tbody>
+            {% for job in jobs %}
+                <tr>
+                    <td>{{ job.company }}</td>
+                    <td>{{ job.title }}</td>
+                    <td>{{ job.relevanceScore is not null ? job.relevanceScore : 'n/a' }}</td>
+                    <td>{{ job.status.value }}</td>
+                    <td>
+                        {% if job.jobUrl %}
+                            <a href="{{ job.jobUrl }}" target="_blank" rel="noopener">Voir</a>
+                        {% else %}
+                            -
+                        {% endif %}
+                    </td>
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    {% endif %}
+</div>
+</body>
+</html>

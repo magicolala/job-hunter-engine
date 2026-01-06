@@ -93,10 +93,17 @@ class JobRepository extends ServiceEntityRepository
             ->getArrayResult();
 
         return array_map(
-            static fn (array $row): array => [
-                'status' => (string) ($row['status'] ?? ''),
-                'count' => (int) ($row['count'] ?? 0),
-            ],
+            static function (array $row): array {
+                $status = $row['status'] ?? '';
+                if ($status instanceof \BackedEnum) {
+                    $status = $status->value;
+                }
+
+                return [
+                    'status' => (string) $status,
+                    'count' => (int) ($row['count'] ?? 0),
+                ];
+            },
             $rows
         );
     }
