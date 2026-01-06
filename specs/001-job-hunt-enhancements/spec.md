@@ -6,6 +6,16 @@
 **Status**: Draft  
 **Input**: User description: "Augmenter le volume de data avec multi-sources, multi-queries, pagination, scoring, extraction des technologies, dates de publication, filtres geo, et suivi de candidatures."
 
+## Clarifications
+
+### Session 2026-01-06
+
+- Q: Single-user or multi-user profile criteria? → A: Single-user mode (one active profile, no user accounts).
+- Q: Relevance score scale? → A: 0–100 integer scale.
+- Q: Default recency filter window? → A: 30 days.
+- Q: Technology extraction list source? → A: Curated internal list maintained in code.
+- Q: Status update precedence? → A: Allow manual overrides (user status wins).
+
 ## User Scenarios & Testing *(mandatory)*
 
 ### User Story 1 - Aggregate Jobs from Multiple Sources (Priority: P0)
@@ -67,7 +77,7 @@ As a job seeker, I want to filter offers by extracted technologies and publish r
 **Acceptance Scenarios**:
 
 1. **Given** offers with extracted technologies, **When** I filter by a technology, **Then** only offers containing that technology are shown.
-2. **Given** offers with publish dates, **When** I filter by recency window, **Then** only offers within that window are shown.
+2. **Given** offers with publish dates, **When** I filter by recency window, **Then** only offers within that window are shown (default 30 days).
 
 ---
 
@@ -120,13 +130,14 @@ As a job seeker, I want to track the status of each application so I can monitor
 #### Intelligence & Scoring
 - **FR-014**: System MUST store user profile criteria used for scoring (role seniority, preferred technologies, location preferences).
 - **FR-015**: System MUST compute a relevance score for each offer based on the stored profile criteria.
-- **FR-016**: System MUST extract and store technologies mentioned in offer descriptions.
+- **FR-016**: System MUST extract and store technologies mentioned in offer descriptions using a curated internal list.
 - **FR-017**: System MUST capture and store offer publish dates when available.
 
 #### Filtering & Tracking
 - **FR-018**: Users MUST be able to filter offers by extracted technologies.
 - **FR-019**: Users MUST be able to filter offers by publish recency.
 - **FR-020**: Users MUST be able to set and update application status for each offer (FOUND, CONTACTED, INTERVIEWING, REJECTED, ACCEPTED).
+- **FR-022**: Manual status updates MUST override any automated status changes.
 - **FR-021**: System MUST present a pipeline summary showing counts per status.
 
 ### Key Entities *(include if feature involves data)*
@@ -137,12 +148,11 @@ As a job seeker, I want to track the status of each application so I can monitor
   - `publishedAt` (datetime, nullable): Publish date
   - `location` (string, nullable): Job location
   - `technologies` (json): Array of extracted technologies
-  - `relevanceScore` (float, nullable): Computed relevance score
+  - `relevanceScore` (int, nullable): Computed relevance score (0-100)
   - `status` (enum): FOUND, CONTACTED, INTERVIEWING, REJECTED, ACCEPTED
   - `statusUpdatedAt` (datetime, nullable): Last status change timestamp
 
-- **ProfileCriteria**: New entity for user preferences:
-  - `userId` (string): User identifier (for multi-user support)
+- **ProfileCriteria**: New entity for user preferences (single-user):
   - `preferredTechnologies` (json): Array of preferred tech stack
   - `seniority` (string): junior, mid, senior, lead
   - `locations` (json): Array of acceptable locations/regions
@@ -166,6 +176,7 @@ As a job seeker, I want to track the status of each application so I can monitor
 - This feature focuses on multi-source aggregation, pagination, offer scoring, technology extraction, publish date capture, filtering, and application status tracking.
 - Initial implementation will support existing sources (WTTJ, Remotive) with enhanced pagination.
 - New sources (LinkedIn, Indeed, French boards) are stretch goals for future iterations.
+- Single-user mode is assumed (no user accounts or per-user profile separation).
 - Alerts, ATS exports, salary analytics, red-flag detection, enrichment caching, and message generation remain out of scope.
 
 ## Success Criteria *(mandatory)*

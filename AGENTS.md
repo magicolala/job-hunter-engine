@@ -39,3 +39,10 @@
 - Required: `APOLLO_API_KEY` for lead enrichment.
 - Ensure a Panther driver is available (e.g., `composer require --dev dbrekelmans/bdi`
   then `vendor/bin/bdi detect drivers`) before running `app:hunt`.
+
+## Active Technologies
+- PHP 8.2+ + Symfony 7.4 (Console, HttpClient), Doctrine ORM/DBAL (001-job-hunt-enhancements)
+- SQLite (Doctrine ORM via DATABASE_URL) (001-job-hunt-enhancements)
+
+## Recent Changes
+- 001-job-hunt-enhancements: Added PHP 8.2+ + Symfony 7.4 (Console, HttpClient), Doctrine ORM/DBAL

@@ -1,0 +1,253 @@
+openapi: 3.0.3
+info:
+  title: Job Hunter Engine API
+  version: 1.0.0
+  description: API contracts for job aggregation, scoring, filtering, and tracking.
+servers:
+  - url: http://localhost
+paths:
+  /jobs:
+    get:
+      summary: List jobs with filters
+      parameters:
+        - in: query
+          name: technologies
+          schema:
+            type: array
+            items:
+              type: string
+          style: form
+          explode: true
+        - in: query
+          name: publishedSince
+          schema:
+            type: string
+            format: date-time
+        - in: query
+          name: status
+          schema:
+            type: string
+            enum: [FOUND, CONTACTED, INTERVIEWING, REJECTED, ACCEPTED]
+        - in: query
+          name: minScore
+          schema:
+            type: number
+            format: float
+      responses:
+        "200":
+          description: List of jobs
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Job"
+    post:
+      summary: Create or update jobs from scraping output
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                $ref: "#/components/schemas/JobInput"
+      responses:
+        "202":
+          description: Jobs accepted for processing
+  /jobs/{jobId}/status:
+    patch:
+      summary: Update application status
+      parameters:
+        - in: path
+          name: jobId
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/StatusUpdate"
+      responses:
+        "200":
+          description: Updated job
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Job"
+  /profile-criteria:
+    get:
+      summary: Get current profile criteria
+      responses:
+        "200":
+          description: Profile criteria
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProfileCriteria"
+    put:
+      summary: Update profile criteria
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ProfileCriteriaInput"
+      responses:
+        "200":
+          description: Updated profile criteria
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProfileCriteria"
+  /scraping-runs:
+    get:
+      summary: List scraping runs
+      responses:
+        "200":
+          description: Scraping runs
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ScrapingRun"
+components:
+  schemas:
+    Job:
+      type: object
+      properties:
+        id:
+          type: string
+        source:
+          type: string
+        externalId:
+          type: string
+          nullable: true
+        title:
+          type: string
+        company:
+          type: string
+        location:
+          type: string
+          nullable: true
+        description:
+          type: string
+          nullable: true
+        publishedAt:
+          type: string
+          format: date-time
+          nullable: true
+        technologies:
+          type: array
+          items:
+            type: string
+        relevanceScore:
+          type: number
+          format: float
+          nullable: true
+        status:
+          type: string
+          enum: [FOUND, CONTACTED, INTERVIEWING, REJECTED, ACCEPTED]
+        statusUpdatedAt:
+          type: string
+          format: date-time
+          nullable: true
+    JobInput:
+      type: object
+      required: [source, title, company]
+      properties:
+        source:
+          type: string
+        externalId:
+          type: string
+        title:
+          type: string
+        company:
+          type: string
+        location:
+          type: string
+        description:
+          type: string
+        publishedAt:
+          type: string
+          format: date-time
+        technologies:
+          type: array
+          items:
+            type: string
+    StatusUpdate:
+      type: object
+      required: [status]
+      properties:
+        status:
+          type: string
+          enum: [FOUND, CONTACTED, INTERVIEWING, REJECTED, ACCEPTED]
+    ProfileCriteria:
+      type: object
+      properties:
+        userId:
+          type: string
+        preferredTechnologies:
+          type: array
+          items:
+            type: string
+        seniority:
+          type: string
+        locations:
+          type: array
+          items:
+            type: string
+        remoteOnly:
+          type: boolean
+    ProfileCriteriaInput:
+      type: object
+      required: [userId, seniority]
+      properties:
+        userId:
+          type: string
+        preferredTechnologies:
+          type: array
+          items:
+            type: string
+        seniority:
+          type: string
+        locations:
+          type: array
+          items:
+            type: string
+        remoteOnly:
+          type: boolean
+    ScrapingRun:
+      type: object
+      properties:
+        id:
+          type: string
+        sources:
+          type: array
+          items:
+            type: string
+        queries:
+          type: array
+          items:
+            type: string
+        totalListings:
+          type: integer
+        uniqueListings:
+          type: integer
+        newJobs:
+          type: integer
+        duplicates:
+          type: integer
+        status:
+          type: string
+          enum: [RUNNING, COMPLETED, FAILED]
+        startedAt:
+          type: string
+          format: date-time
+        completedAt:
+          type: string
+          format: date-time
+          nullable: true
