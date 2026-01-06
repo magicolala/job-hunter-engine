@@ -31,8 +31,8 @@ paths:
         - in: query
           name: minScore
           schema:
-            type: number
-            format: float
+            type: integer
+            format: int32
       responses:
         "200":
           description: List of jobs
@@ -145,8 +145,8 @@ components:
           items:
             type: string
         relevanceScore:
-          type: number
-          format: float
+          type: integer
+          format: int32
           nullable: true
         status:
           type: string
@@ -188,8 +188,6 @@ components:
     ProfileCriteria:
       type: object
       properties:
-        userId:
-          type: string
         preferredTechnologies:
           type: array
           items:
@@ -204,10 +202,8 @@ components:
           type: boolean
     ProfileCriteriaInput:
       type: object
-      required: [userId, seniority]
+      required: [seniority]
       properties:
-        userId:
-          type: string
         preferredTechnologies:
           type: array
           items:

@@ -15,7 +15,7 @@ tracking.
 - description (text, nullable)
 - publishedAt (datetime, nullable)
 - technologies (json array, default empty)
-- relevanceScore (float, nullable)
+- relevanceScore (int, nullable, 0-100)
 - status (enum: FOUND, CONTACTED, INTERVIEWING, REJECTED, ACCEPTED; default FOUND)
 - statusUpdatedAt (datetime, nullable)
 - createdAt (datetime)
@@ -24,18 +24,17 @@ tracking.
 **Validation Rules**:
 - source, title, company required.
 - technologies must be normalized canonical values.
-- relevanceScore must be between 0.0 and 1.0 (or 0-100 if configured; document).
+- relevanceScore must be between 0 and 100.
 
 **Relationships**:
 - Many Job records per ScrapingRun (optional foreign key).
 
 ## ProfileCriteria
 
-**Description**: User preferences used for scoring.
+**Description**: User preferences used for scoring (single-user).
 
 **Fields**:
 - id (uuid or int)
-- userId (string, required)
 - preferredTechnologies (json array, default empty)
 - seniority (string, required; allowed: junior, mid, senior, lead)
 - locations (json array, default empty)
