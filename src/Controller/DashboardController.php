@@ -75,6 +75,7 @@ final class DashboardController extends AbstractController
             $sources = ['wttj', 'remotive'];
         }
         $queries = $this->parseCsv((string) $request->request->get('queries', 'symfony'));
+        $region = trim((string) $request->request->get('region', ''));
         $limitValue = $request->request->get('limit');
         $limit = $limitValue !== null ? (int) $limitValue : null;
 
@@ -88,6 +89,9 @@ final class DashboardController extends AbstractController
 
         if ($limit !== null && $limit > 0) {
             $command[] = '--limit=' . $limit;
+        }
+        if ($region !== '') {
+            $command[] = '--region=' . $region;
         }
 
         $process = new Process($command, $kernel->getProjectDir());

@@ -55,6 +55,7 @@ class JobHuntCommand extends Command
             ->addOption('source', null, InputOption::VALUE_REQUIRED, 'Source to use: wttj, wttj-api, or remotive.', 'wttj')
             ->addOption('query', null, InputOption::VALUE_REQUIRED, 'Search query for API sources.', self::DEFAULT_QUERY)
             ->addOption('limit', null, InputOption::VALUE_OPTIONAL, 'Max number of listings to process.')
+            ->addOption('region', null, InputOption::VALUE_OPTIONAL, 'Region filter (source-specific).')
             ->addOption('output', null, InputOption::VALUE_REQUIRED, 'CSV output path.', self::DEFAULT_OUTPUT)
             ->addOption('no-enrich', null, InputOption::VALUE_NONE, 'Skip Apollo enrichment.')
             ->addOption('throttle-ms', null, InputOption::VALUE_OPTIONAL, 'Delay between enrich calls in ms.', 0)
@@ -71,6 +72,7 @@ class JobHuntCommand extends Command
         $legacyQuery = (string) $input->getOption('query');
         $sourcesOption = (string) $input->getOption('sources');
         $queriesOption = (string) $input->getOption('queries');
+        $region = (string) $input->getOption('region');
         $sources = $this->sourceRegistry->normalizeSources(
             $sourcesOption !== '' ? $this->parseCsvList($sourcesOption) : [$legacySource]
         );
@@ -102,7 +104,7 @@ class JobHuntCommand extends Command
         }
 
         $run = $this->scrapingRunRecorder->startRun($sources, $queries);
-        $listings = $this->scraper->scrapeSources($sources, $queries, $limit, $debugScrape, $url);
+        $listings = $this->scraper->scrapeSources($sources, $queries, $limit, $debugScrape, $url, $region);
         $total = count($listings);
         $existingExternalIds = $this->jobRepository->findExistingExternalIds(
             array_values(array_filter(array_map(
