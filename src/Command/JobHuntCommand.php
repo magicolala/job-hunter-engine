@@ -110,7 +110,7 @@ class JobHuntCommand extends Command
                 $listings
             )))
         );
-        $deduped = $this->deduplicator->deduplicate($listings, $existingExternalIds);
+        $deduped = $this->deduplicator->deduplicate($listings);
         $unique = count($deduped);
         $duplicates = $total - $unique;
         $io->text(sprintf('Scraped %d listings (%d unique).', $total, $unique));
@@ -121,6 +121,7 @@ class JobHuntCommand extends Command
 
         $exportRows = [];
         $created = 0;
+        $updated = 0;
         $total = $unique;
         $progress = null;
         $criteria = $this->profileCriteriaService->getCurrent();
@@ -132,12 +133,28 @@ class JobHuntCommand extends Command
 
         foreach ($deduped as $listing) {
             $listing = $this->jobIngestionService->enrichListing($listing, $criteria);
-            $job = (new Job())
-                ->setExternalId($listing['externalId'] !== '' ? $listing['externalId'] : null)
-                ->setSource($listing['source'] ?? $legacySource)
-                ->setCompany($listing['company'])
-                ->setTitle($listing['title'])
-                ->setJobUrl($listing['jobUrl'] !== '' ? $listing['jobUrl'] : null);
+            $externalId = $listing['externalId'] !== '' ? $listing['externalId'] : null;
+            $job = null;
+            if ($externalId !== null && in_array($externalId, $existingExternalIds, true)) {
+                $job = $this->jobRepository->findOneBy(['externalId' => $externalId]);
+            }
+
+            if ($job === null) {
+                $job = (new Job())
+                    ->setExternalId($externalId)
+                    ->setSource($listing['source'] ?? $legacySource)
+                    ->setCompany($listing['company'])
+                    ->setTitle($listing['title'])
+                    ->setJobUrl($listing['jobUrl'] !== '' ? $listing['jobUrl'] : null);
+                $created++;
+            } else {
+                $job->setSource($listing['source'] ?? $legacySource);
+                $job->setCompany($listing['company']);
+                $job->setTitle($listing['title']);
+                $job->setJobUrl($listing['jobUrl'] !== '' ? $listing['jobUrl'] : null);
+                $updated++;
+            }
+
             $this->jobIngestionService->applyToJob($job, $listing);
 
             $contact = [];
@@ -165,7 +182,6 @@ class JobHuntCommand extends Command
             }
 
             $this->entityManager->persist($job);
-            $created++;
 
             if ($progress) {
                 $progress->advance();
@@ -181,7 +197,7 @@ class JobHuntCommand extends Command
         $csvPath = $this->csvExporter->export($exportRows, $outputPath);
         $this->scrapingRunRecorder->completeRun($run, $total, $unique, $created, $duplicates);
 
-        $io->success(sprintf('Created %d new jobs, skipped %d duplicates.', $created, $duplicates));
+        $io->success(sprintf('Created %d new jobs, updated %d, skipped %d duplicates.', $created, $updated, $duplicates));
         $io->text(sprintf('CSV export ready: %s', $csvPath));
 
         return Command::SUCCESS;

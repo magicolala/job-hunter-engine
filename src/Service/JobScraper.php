@@ -157,6 +157,19 @@ class JobScraper
 
                 $externalId = $externalId !== '' ? $externalId : $this->buildExternalId($company, $title, $jobUrl);
 
+                $description = trim((string) ($hit['description'] ?? $hit['mission'] ?? ''));
+                $location = '';
+                if (isset($hit['office']) && is_array($hit['office'])) {
+                    $location = trim((string) ($hit['office']['city'] ?? $hit['office']['name'] ?? ''));
+                }
+                if ($location === '' && isset($hit['locations']) && is_array($hit['locations'])) {
+                    $firstLocation = $hit['locations'][0] ?? [];
+                    if (is_array($firstLocation)) {
+                        $location = trim((string) ($firstLocation['city'] ?? $firstLocation['name'] ?? ''));
+                    }
+                }
+                $publishedAt = (string) ($hit['published_at'] ?? $hit['created_at'] ?? '');
+
                 $jobs[] = [
                     'externalId' => $externalId,
                     'company' => $company,
@@ -164,6 +177,9 @@ class JobScraper
                     'href' => $jobUrl,
                     'jobUrl' => $jobUrl,
                     'source' => 'wttj-api',
+                    'description' => $description,
+                    'location' => $location,
+                    'publishedAt' => $publishedAt,
                 ];
 
                 $count++;
@@ -207,9 +223,12 @@ class JobScraper
                     break 2;
                 }
 
-                $company = trim((string) ($job['company_name'] ?? ''));
-                $title = trim((string) ($job['title'] ?? ''));
-                $jobUrl = trim((string) ($job['url'] ?? ''));
+            $company = trim((string) ($job['company_name'] ?? ''));
+            $title = trim((string) ($job['title'] ?? ''));
+            $jobUrl = trim((string) ($job['url'] ?? ''));
+            $description = trim((string) ($job['description'] ?? ''));
+            $location = trim((string) ($job['candidate_required_location'] ?? ''));
+            $publishedAt = (string) ($job['publication_date'] ?? '');
                 $externalId = (string) ($job['id'] ?? '');
 
                 if ($company === '' || $title === '') {
@@ -225,14 +244,17 @@ class JobScraper
                 $seenExternalIds[$externalId] = true;
                 $pageCount++;
 
-                $jobs[] = [
-                    'externalId' => $externalId,
-                    'company' => $company,
-                    'title' => $title,
-                    'href' => $jobUrl,
-                    'jobUrl' => $jobUrl,
-                    'source' => 'remotive',
-                ];
+            $jobs[] = [
+                'externalId' => $externalId,
+                'company' => $company,
+                'title' => $title,
+                'href' => $jobUrl,
+                'jobUrl' => $jobUrl,
+                'source' => 'remotive',
+                'description' => $description,
+                'location' => $location,
+                'publishedAt' => $publishedAt,
+            ];
 
                 $count++;
             }

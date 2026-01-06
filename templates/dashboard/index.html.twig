@@ -1,353 +1,208 @@
-<!DOCTYPE html>
-<html lang="fr">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Job Hunter Dashboard</title>
-    <style>
-        @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap');
+{% extends 'base.html.twig' %}
 
-        :root {
-            --bg: #f6f0e8;
-            --ink: #1d1a16;
-            --muted: #6b635c;
-            --accent: #ff6b4a;
-            --accent-2: #2e7d6b;
-            --card: #fff7ee;
-            --border: #e3d7cb;
-        }
+{% block title %}Dashboard | Job Hunter Engine{% endblock %}
 
-        * {
-            box-sizing: border-box;
-        }
+{% block stylesheets %}
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css">
+{% endblock %}
 
-        body {
-            margin: 0;
-            font-family: 'Space Grotesk', sans-serif;
-            color: var(--ink);
-            background: radial-gradient(80% 60% at 10% 10%, #fff1e2 0%, var(--bg) 45%, #f2ebe2 100%);
-        }
+{% block javascripts %}
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+{% endblock %}
 
-        .page {
-            max-width: 1200px;
-            margin: 0 auto;
-            padding: 32px 24px 80px;
-        }
-
-        .hero {
-            display: grid;
-            grid-template-columns: 1.1fr 0.9fr;
-            gap: 24px;
-            align-items: center;
-            margin-bottom: 28px;
-        }
-
-        .hero h1 {
-            font-size: clamp(28px, 3.2vw, 44px);
-            letter-spacing: -0.02em;
-            margin: 0 0 12px;
-        }
-
-        .hero p {
-            margin: 0;
-            color: var(--muted);
-            font-size: 16px;
-        }
-
-        .hero-panel {
-            background: var(--card);
-            border: 1px solid var(--border);
-            border-radius: 20px;
-            padding: 18px 20px;
-            display: grid;
-            gap: 12px;
-        }
-
-        .badge {
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-            padding: 6px 10px;
-            border-radius: 999px;
-            background: #ffe2d7;
-            color: #4f2b24;
-            font-size: 12px;
-            font-weight: 600;
-            text-transform: uppercase;
-            letter-spacing: 0.08em;
-        }
-
-        .stat-grid {
-            display: grid;
-            grid-template-columns: repeat(4, minmax(0, 1fr));
-            gap: 16px;
-            margin-bottom: 24px;
-        }
-
-        .stat-card {
-            background: var(--card);
-            border: 1px solid var(--border);
-            border-radius: 18px;
-            padding: 16px;
-        }
-
-        .stat-card h3 {
-            margin: 0 0 8px;
-            font-size: 13px;
-            text-transform: uppercase;
-            letter-spacing: 0.06em;
-            color: var(--muted);
-        }
-
-        .stat-card .value {
-            font-size: 26px;
-            font-weight: 700;
-        }
-
-        .layout {
-            display: grid;
-            grid-template-columns: 1.4fr 1fr;
-            gap: 20px;
-        }
-
-        .card {
-            background: #ffffff;
-            border: 1px solid var(--border);
-            border-radius: 18px;
-            padding: 18px;
-            box-shadow: 0 10px 30px rgba(40, 24, 10, 0.08);
-        }
-
-        .card h2 {
-            margin: 0 0 14px;
-            font-size: 18px;
-        }
-
-        .pill {
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
-            padding: 6px 10px;
-            border-radius: 999px;
-            background: #eef7f3;
-            color: var(--accent-2);
-            font-size: 12px;
-            font-weight: 600;
-        }
-
-        .pipeline {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
-            gap: 10px;
-        }
-
-        .pipeline-item {
-            background: #f9f5f1;
-            border-radius: 12px;
-            padding: 10px 12px;
-            border: 1px solid var(--border);
-        }
-
-        .pipeline-item span {
-            display: block;
-            font-size: 12px;
-            color: var(--muted);
-            text-transform: uppercase;
-            letter-spacing: 0.06em;
-        }
-
-        .pipeline-item strong {
-            font-size: 20px;
-        }
-
-        .tech-list {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 8px;
-        }
-
-        .tech-pill {
-            padding: 6px 12px;
-            border-radius: 999px;
-            background: #fff1e2;
-            border: 1px dashed #f0c7a5;
-            font-size: 13px;
-        }
-
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            font-size: 14px;
-        }
-
-        th, td {
-            text-align: left;
-            padding: 10px 8px;
-            border-bottom: 1px solid #f0e4d6;
-        }
-
-        th {
-            font-size: 12px;
-            text-transform: uppercase;
-            letter-spacing: 0.06em;
-            color: var(--muted);
-        }
-
-        .empty {
-            color: var(--muted);
-            font-style: italic;
-        }
-
-        @media (max-width: 920px) {
-            .hero {
-                grid-template-columns: 1fr;
-            }
-
-            .stat-grid {
-                grid-template-columns: repeat(2, minmax(0, 1fr));
-            }
-
-            .layout {
-                grid-template-columns: 1fr;
-            }
-        }
-
-        @media (max-width: 640px) {
-            .stat-grid {
-                grid-template-columns: 1fr;
-            }
-        }
-    </style>
-</head>
-<body>
-<div class="page">
+{% block body %}
+<div class="animate-fade-in">
     <section class="hero">
-        <div>
-            <span class="badge">Job Hunter Engine</span>
-            <h1>Dashboard de scraping et de priorisation</h1>
-            <p>Vue instantanee sur le volume, la qualite et le suivi de tes candidatures.</p>
-            <div style="margin-top: 12px;">
-                <a class="pill" href="/jobs">Voir la liste des offres</a>
-            </div>
-        </div>
-        <div class="hero-panel">
-            <div class="pill">Dernier run</div>
-            <form method="post" action="/dashboard/run-scrape">
-                <button type="submit" style="background: var(--accent); color: white; border: none; padding: 8px 12px; border-radius: 10px; font-weight: 600; cursor: pointer;">Lancer un scraping</button>
+        <h1>Dashboard de scraping</h1>
+        <p>Vue instantanée sur le volume, la qualité et le suivi de tes candidatures.</p>
+        {% for message in app.flashes('success') %}
+            <div class="flash flash-success">{{ message }}</div>
+        {% endfor %}
+        {% for message in app.flashes('error') %}
+            <div class="flash flash-error">{{ message }}</div>
+        {% endfor %}
+        <div style="margin-top: 1.5rem; display: flex; gap: 1rem; justify-content: center;">
+            <a class="btn btn-accent" href="/jobs">Voir les offres</a>
+            <form method="post" action="/dashboard/run-scrape" style="display: flex; gap: 0.5rem; flex-wrap: wrap; justify-content: center;" data-scrape-form>
+                <div class="select-wrap">
+                    <label for="sources" class="select-label">Sources</label>
+                    <select id="sources" name="sources[]" class="select2" multiple>
+                        <optgroup label="Disponibles">
+                            <option value="wttj" selected>WTTJ</option>
+                            <option value="wttj-api">WTTJ API</option>
+                            <option value="remotive" selected>Remotive</option>
+                        </optgroup>
+                        <optgroup label="A venir">
+                            <option value="linkedin" disabled>LinkedIn</option>
+                            <option value="indeed" disabled>Indeed</option>
+                            <option value="adzuna" disabled>Adzuna</option>
+                            <option value="humancoders" disabled>HumanCoders</option>
+                            <option value="alsacreations" disabled>Alsacreations</option>
+                        </optgroup>
+                    </select>
+                    <div class="select-hint">Ctrl/Command pour multi-selection</div>
+                </div>
+                <input type="text" name="queries" value="symfony" placeholder="queries"
+                       class="input">
+                <input type="number" name="limit" placeholder="limite"
+                       class="input" style="max-width: 90px;">
+                <button type="submit" class="btn btn-primary" data-scrape-button>Lancer un scraping</button>
+                <div class="scrape-loader" data-scrape-loader aria-live="polite">
+                    <div class="spinner"></div>
+                    <span>Scraping en cours…</span>
+                </div>
             </form>
-            {% if latestRun %}
-                <div><strong>Status:</strong> {{ latestRun.status }}</div>
-                <div><strong>Sources:</strong> {{ latestRun.sources|join(', ') }}</div>
-                <div><strong>Queries:</strong> {{ latestRun.queries|join(', ') }}</div>
-                <div><strong>Started:</strong> {{ latestRun.startedAt|date('Y-m-d H:i') }}</div>
-            {% else %}
-                <div class="empty">Aucun run enregistre.</div>
-            {% endif %}
         </div>
     </section>
 
     <section class="stat-grid">
-        <div class="stat-card">
-            <h3>Total offres</h3>
-            <div class="value">{{ totalJobs }}</div>
+        <div class="card stat-card">
+            <div class="stat-label">Total offres</div>
+            <div class="stat-value">{{ totalJobs }}</div>
         </div>
-        <div class="stat-card">
-            <h3>Score moyen (20 derniers)</h3>
-            <div class="value">{{ avgScore is not null ? avgScore ~ '/100' : 'n/a' }}</div>
+        <div class="card stat-card">
+            <div class="stat-label">Score moyen (20)</div>
+            <div class="stat-value">{{ avgScore is not null ? avgScore|number_format(0) ~ '%' : 'n/a' }}</div>
         </div>
-        <div class="stat-card">
-            <h3>Technos dominantes</h3>
-            <div class="value">{{ topTechs|length }}</div>
+        <div class="card stat-card">
+            <div class="stat-label">Technos dominantes</div>
+            <div class="stat-value">{{ topTechs|length }}</div>
         </div>
-        <div class="stat-card">
-            <h3>Runs recents</h3>
-            <div class="value">{{ recentRuns|length }}</div>
+        <div class="card stat-card">
+            <div class="stat-label">Runs récents</div>
+            <div class="stat-value">{{ recentRuns|length }}</div>
         </div>
     </section>
 
-    <section class="layout">
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; margin-bottom: 2rem;">
         <div class="card">
-            <h2>Pipeline candidatures</h2>
+            <h2 style="margin-bottom: 1.5rem;">Pipeline candidatures</h2>
             {% if pipeline is empty %}
-                <div class="empty">Aucun statut disponible.</div>
+                <p style="color: var(--text-muted); font-style: italic;">Aucun statut disponible.</p>
             {% else %}
-                <div class="pipeline">
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 1rem;">
                     {% for row in pipeline %}
-                        <div class="pipeline-item">
-                            <span>{{ row.status }}</span>
-                            <strong>{{ row.count }}</strong>
+                        <div style="background: var(--bg-primary); padding: 1rem; border-radius: var(--radius-md); border: 1px solid var(--border-color);">
+                            <div class="stat-label" style="font-size: 0.65rem;">{{ row.status }}</div>
+                            <div style="font-size: 1.25rem; font-weight: 800;">{{ row.count }}</div>
                         </div>
                     {% endfor %}
                 </div>
             {% endif %}
-            <div style="margin-top: 18px;">
-                <h2>Technologies les plus vues</h2>
-                {% if topTechs is empty %}
-                    <div class="empty">Aucune techno extraite.</div>
-                {% else %}
-                    <div class="tech-list">
-                        {% for name, count in topTechs %}
-                            <span class="tech-pill">{{ name }} ({{ count }})</span>
-                        {% endfor %}
-                    </div>
-                {% endif %}
-            </div>
+            
+            <h2 style="margin: 2rem 0 1.5rem;">Technologies populaires</h2>
+            {% if topTechs is empty %}
+                <p style="color: var(--text-muted); font-style: italic;">Aucune techno extraite.</p>
+            {% else %}
+                <div style="display: flex; flex-wrap: wrap; gap: 0.5rem;">
+                    {% for name, count in topTechs %}
+                        <span class="badge badge-tech">{{ name }} <span style="opacity: 0.6; margin-left: 0.25rem;">{{ count }}</span></span>
+                    {% endfor %}
+                </div>
+            {% endif %}
         </div>
 
         <div class="card">
-            <h2>Runs recents</h2>
-            {% if recentRuns is empty %}
-                <div class="empty">Aucun historique.</div>
+            <h2 style="margin-bottom: 1.5rem;">Dernier Run</h2>
+            {% if latestRun %}
+                <div style="display: grid; gap: 1rem;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); padding-bottom: 0.75rem;">
+                        <span class="stat-label">Status</span>
+                        <span class="badge badge-status" style="background: var(--accent-success); color: white;">{{ latestRun.status }}</span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); padding-bottom: 0.75rem;">
+                        <span class="stat-label">Unique listings</span>
+                        <span style="font-weight: 700;">{{ latestRun.uniqueListings }}</span>
+                    </div>
+                    <div>
+                        <span class="stat-label" style="display: block; margin-bottom: 0.5rem;">Sources</span>
+                        <div style="display: flex; flex-wrap: wrap; gap: 0.4rem;">
+                            {% for source in latestRun.sources %}
+                                <span class="badge badge-status">{{ source }}</span>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    <div>
+                        <span class="stat-label" style="display: block; margin-bottom: 0.5rem;">Requêtes</span>
+                        <div style="display: flex; flex-wrap: wrap; gap: 0.4rem;">
+                            {% for query in latestRun.queries %}
+                                <span class="badge badge-status">{{ query }}</span>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    <div style="padding-top: 0.5rem; text-align: right;">
+                        <span style="font-size: 0.75rem; color: var(--text-muted);">Lancé le {{ latestRun.startedAt|date('d/m H:i') }}</span>
+                    </div>
+                </div>
             {% else %}
-                <table>
-                    <thead>
-                    <tr>
-                        <th>Date</th>
-                        <th>Status</th>
-                        <th>Unique</th>
-                    </tr>
-                    </thead>
-                    <tbody>
-                    {% for run in recentRuns %}
-                        <tr>
-                            <td>{{ run.startedAt|date('m/d H:i') }}</td>
-                            <td>{{ run.status }}</td>
-                            <td>{{ run.uniqueListings }}</td>
-                        </tr>
-                    {% endfor %}
-                    </tbody>
-                </table>
+                <p style="color: var(--text-muted); font-style: italic;">Aucun run enregistré.</p>
             {% endif %}
         </div>
-    </section>
+    </div>
 
-    <section class="card" style="margin-top: 20px;">
-        <h2>Dernieres offres</h2>
+    <section class="card">
+        <h2 style="margin-bottom: 1.5rem;">Dernières offres</h2>
         {% if recentJobs is empty %}
-            <div class="empty">Aucune offre en base.</div>
+            <p style="color: var(--text-muted); font-style: italic;">Aucune offre en base.</p>
         {% else %}
-            <table>
-                <thead>
-                <tr>
-                    <th>Entreprise</th>
-                    <th>Poste</th>
-                    <th>Score</th>
-                    <th>Statut</th>
-                </tr>
-                </thead>
-                <tbody>
-                {% for job in recentJobs %}
-                    <tr>
-                        <td>{{ job.company }}</td>
-                        <td>{{ job.title }}</td>
-                        <td>{{ job.relevanceScore is not null ? job.relevanceScore : 'n/a' }}</td>
-                        <td>{{ job.status.value }}</td>
-                    </tr>
-                {% endfor %}
-                </tbody>
-            </table>
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Entreprise</th>
+                            <th>Poste</th>
+                            <th>Score</th>
+                            <th>Statut</th>
+                            <th style="text-align: right;">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for job in recentJobs %}
+                            <tr>
+                                <td style="font-weight: 700;">{{ job.company }}</td>
+                                <td>{{ job.title }}</td>
+                                <td>
+                                    <span class="badge" style="background: {{ job.relevanceScore > 80 ? '#dcfce7' : (job.relevanceScore > 60 ? '#fef9c3' : '#f1f5f9') }}; 
+                                                  color: {{ job.relevanceScore > 80 ? '#166534' : (job.relevanceScore > 60 ? '#854d0e' : '#475569') }}">
+                                        {{ job.relevanceScore is not null ? job.relevanceScore ~ '%' : 'n/a' }}
+                                    </span>
+                                </td>
+                                <td><span class="badge badge-status">{{ job.status.value }}</span></td>
+                                <td style="text-align: right;">
+                                    <a href="/jobs/{{ job.id }}" class="btn btn-primary" style="padding: 0.4rem 0.8rem; font-size: 0.75rem;">Voir</a>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
         {% endif %}
     </section>
 </div>
-</body>
-</html>
+<script>
+    (() => {
+        const form = document.querySelector('[data-scrape-form]');
+        const button = document.querySelector('[data-scrape-button]');
+        const loader = document.querySelector('[data-scrape-loader]');
+
+        if (!form || !button || !loader) {
+            return;
+        }
+
+        form.addEventListener('submit', () => {
+            button.disabled = true;
+            loader.style.display = 'inline-flex';
+        });
+    })();
+</script>
+<script>
+    $(document).ready(() => {
+        $('#sources').select2({
+            width: 'resolve',
+            placeholder: 'Sources',
+            closeOnSelect: false
+        });
+    });
+</script>
+{% endblock %}

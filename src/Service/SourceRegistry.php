@@ -9,6 +9,11 @@ final class SourceRegistry
     public const SOURCE_WTTJ = 'wttj';
     public const SOURCE_WTTJ_API = 'wttj-api';
     public const SOURCE_REMOTIVE = 'remotive';
+    public const SOURCE_ADZUNA = 'adzuna';
+    public const SOURCE_HUMANCODERS = 'humancoders';
+    public const SOURCE_ALSACREATIONS = 'alsacreations';
+    public const SOURCE_LINKEDIN = 'linkedin';
+    public const SOURCE_INDEED = 'indeed';
 
     /**
      * @return string[]
@@ -19,6 +24,11 @@ final class SourceRegistry
             self::SOURCE_WTTJ,
             self::SOURCE_WTTJ_API,
             self::SOURCE_REMOTIVE,
+            self::SOURCE_ADZUNA,
+            self::SOURCE_HUMANCODERS,
+            self::SOURCE_ALSACREATIONS,
+            self::SOURCE_LINKEDIN,
+            self::SOURCE_INDEED,
         ];
     }
 
